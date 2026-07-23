@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<title>Haystack News — opening poll…</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;color:#333;margin:0;
+       display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center}
+  .box{max-width:420px;padding:24px}
+  a{color:#c8102e;font-weight:bold}
+</style>
+</head>
+<body>
+<div class="box">
+  <p>Taking you to the poll&hellip;</p>
+  <p id="fallback" style="display:none">If you're not redirected,
+     <a id="link" href="https://www.haystack.tv/polls">click here</a>.</p>
+</div>
+<script>
+/*
+ * Haystack poll-outreach click redirect.
+ * Link shape:  r.html?c=<pitch_id>&u=<encoded poll URL>
+ * Does two things, in the browser (no Apps Script HTML serving involved):
+ *   1) pings the tracker's plain-text ContentService endpoint (?k=) to log the
+ *      click — the serving path proven to work in every account/browser;
+ *   2) redirects the reader to the real poll page.
+ *
+ * TRACKER_EXEC must be a HAYSTACK-account deployment /exec URL whose script
+ * includes the ?k= handler (PollTracker.gs, redeployed 2026-07-22+). Any
+ * deployment of that same script project logs to the same tracking Sheet, so
+ * if you redeploy and the /exec changes, just update the one line below.
+ */
+var TRACKER_EXEC = "https://script.google.com/macros/s/AKfycbwsvFIYDTboClJTTTnbiLw7OYuylxhvJwb23g-Z6fhafgnwgBtv21FTQwFhxrgF0KYR/exec";
+
+(function () {
+  function param(name) {
+    var m = new RegExp("[?&]" + name + "=([^&]*)").exec(location.search);
+    return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : "";
+  }
+
+  var c = param("c");
+  var u = param("u");
+
+  // Open-redirect safety: only ever send the reader to a Haystack URL.
+  if (!/^https:\/\/(www\.)?haystack\.tv\//i.test(u)) {
+    u = "https://www.haystack.tv/polls";
+  }
+
+  document.getElementById("link").href = u;
+
+  var redirected = false;
+  function go() {
+    if (redirected) return;
+    redirected = true;
+    location.replace(u);
+  }
+
+  // Fire the click-log beacon (fire-and-forget), then redirect.
+  if (c) {
+    var img = new Image();
+    img.onload = go;
+    img.onerror = go;
+    img.src = TRACKER_EXEC + "?k=" + encodeURIComponent(c) +
+              "&u=" + encodeURIComponent(u) + "&t=" + Date.now();
+  }
+
+  // Always redirect, even if the beacon stalls or c is missing.
+  setTimeout(function () {
+    document.getElementById("fallback").style.display = "block";
+    go();
+  }, 700);
+})();
+</script>
+</body>
+</html>
